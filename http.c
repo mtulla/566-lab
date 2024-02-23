@@ -102,6 +102,9 @@ const char *http_request_line(int fd, char *reqpath, char *env, size_t *env_len)
     }
 
     /* decode URL escape sequences in the requested path into reqpath */
+    if (strlen(sp1) > 4096) {
+	return "Request is too long.";
+    }
     url_decode(reqpath, sp1);
 
     envp += sprintf(envp, "REQUEST_URI=%s", reqpath) + 1;
@@ -160,7 +163,7 @@ const char *http_request_headers(int fd)
 {
     static char buf[8192];      /* static variables are not on the stack */
     const char *r;
-    char value[512];
+    static char value[512];
     char envvar[512];
 
     /* For lab 2: don't remove this line. */
