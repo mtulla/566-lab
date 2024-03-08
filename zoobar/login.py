@@ -4,7 +4,7 @@ from debug import *
 from zoodb import *
 from typing import Optional
 
-import auth
+import auth_client
 import bank
 import random
 
@@ -13,7 +13,7 @@ class User(object):
         self.person = None
 
     def checkLogin(self, username: str, password: str) -> Optional[str]:
-        token = auth.login(username, password)
+        token = auth_client.login(username, password)
         if token is not None:
             return self.loginCookie(username, token)
         else:
@@ -27,8 +27,18 @@ class User(object):
         self.person = None
 
     def addRegistration(self, username: str, password: str) -> Optional[str]:
-        token = auth.register(username, password)
+        token = auth_client.register(username, password)
         if token is not None:
+            # Add user to Person DB.
+            person_db = person_setup()
+            person = person_db.query(Person).get(username)
+            if person:
+                log(f"[E] Person with username: {username} already exists in Person DB")
+                raise Exception()
+            newperson = Person()
+            newperson.username = username
+            person_db.add(newperson)
+            person_db.commit()
             return self.loginCookie(username, token)
         else:
             return None
@@ -37,7 +47,7 @@ class User(object):
         if cookie is None:
             return
         (username, token) = cookie.rsplit("#", 1)
-        if auth.check_token(username, token):
+        if auth_client.check_token(username, token):
             self.setPerson(username, token)
 
     def setPerson(self, username: str, token: str) -> None:

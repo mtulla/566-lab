@@ -5,15 +5,20 @@ import os
 from debug import *
 
 PersonBase = declarative_base()
+CredBase = declarative_base()
 TransferBase = declarative_base()
 
 class Person(PersonBase):
     __tablename__ = "person"
     username = Column(String(128), primary_key=True)
-    password = Column(String(128))
-    token = Column(String(128))
     zoobars = Column(Integer, nullable=False, default=10)
     profile = Column(String(5000), nullable=False, default="")
+
+class Cred(CredBase):
+    __tablename__ = "cred"
+    username = Column(String(128), primary_key=True)
+    password = Column(String(128))
+    token = Column(String(128))
 
 class Transfer(TransferBase):
     __tablename__ = "transfer"
@@ -24,10 +29,13 @@ class Transfer(TransferBase):
     time = Column(String)
 
 def dbsetup(name, base):
+    log(f"dbsetup with name={name}")
+
     thisdir = os.path.dirname(os.path.abspath(__file__))
     dbdir   = os.path.join(thisdir, "db", name)
     if not os.path.exists(dbdir):
         os.makedirs(dbdir)
+        log(f"Made new db dir at {dbdir}")
 
     dbfile  = os.path.join(dbdir, "%s.db" % name)
     engine  = create_engine('sqlite:///%s' % dbfile,
@@ -39,5 +47,9 @@ def dbsetup(name, base):
 def person_setup():
     return dbsetup("person", PersonBase)
 
+def cred_setup():
+    return dbsetup("cred", CredBase)
+
 def transfer_setup():
     return dbsetup("transfer", TransferBase)
+
