@@ -7,11 +7,11 @@ from debug import *
 PersonBase = declarative_base()
 CredBase = declarative_base()
 TransferBase = declarative_base()
+BankBase = declarative_base()
 
 class Person(PersonBase):
     __tablename__ = "person"
     username = Column(String(128), primary_key=True)
-    zoobars = Column(Integer, nullable=False, default=10)
     profile = Column(String(5000), nullable=False, default="")
 
 class Cred(CredBase):
@@ -28,6 +28,11 @@ class Transfer(TransferBase):
     recipient = Column(String(128))
     amount = Column(Integer)
     time = Column(String)
+
+class Bank(BankBase):
+    __tablename__="bank"
+    username = Column(String(128), primary_key=True)
+    zoobars = Column(Integer, nullable=False, default=10)
 
 def dbsetup(name, base):
     log(f"dbsetup with name={name}")
@@ -53,4 +58,7 @@ def cred_setup():
 
 def transfer_setup():
     return dbsetup("transfer", TransferBase)
+
+def bank_setup():
+    return dbsetup("bank", BankBase)
 

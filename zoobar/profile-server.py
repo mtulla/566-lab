@@ -6,7 +6,7 @@ import rpcsrv
 import sys
 import os
 import hashlib
-import bank
+import bank_client
 import zoodb
 import tempfile
 import shutil
@@ -21,10 +21,11 @@ from debug import *
 ## accesses the bank state, based on your design for privilege-separating
 ## the bank.
 class ProfileAPIServer(rpcsrv.RpcServer):
-    def __init__(self, user, visitor, pcode):
+    def __init__(self, user, visitor, pcode, token):
         self.user = user
         self.visitor = visitor
         self.pcode = pcode
+        self.token = token
 
     def rpc_get_self(self):
         return self.user
@@ -33,16 +34,16 @@ class ProfileAPIServer(rpcsrv.RpcServer):
         return self.visitor
 
     def rpc_get_xfers(self, username):
-        return bank.get_log(username)
+        return bank_client.get_log(username)
 
     def rpc_get_user_info(self, username):
         return { 'username': self.user,
                  'profile': self.pcode,
-                 'zoobars': bank.balance(username),
+                 'zoobars': bank_client.balance(username),
                }
 
-    def rpc_xfer(self, target, zoobars):
-        bank.transfer(self.user, target, zoobars)
+    def rpc_xfer(self, target, zoobars, token):
+        pass
 
 class FifoServer(object):
     def __init__(self, server, fifo_pn):

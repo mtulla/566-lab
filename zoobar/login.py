@@ -5,7 +5,7 @@ from zoodb import *
 from typing import Optional
 
 import auth_client
-import bank
+import bank_client
 import random
 
 class User(object):
@@ -28,6 +28,7 @@ class User(object):
 
     def addRegistration(self, username: str, password: str) -> Optional[str]:
         token = auth_client.register(username, password)
+        account = bank_client.init_account(username)
         if token is not None:
             # Add user to Person DB.
             person_db = person_setup()
@@ -54,7 +55,7 @@ class User(object):
         persondb = person_setup()
         self.person = persondb.query(Person).get(username)
         self.token = token
-        self.zoobars = bank.balance(username)
+        self.zoobars = bank_client.balance(username)
 
 def logged_in() -> bool:
     g.user = User()

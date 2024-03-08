@@ -1,22 +1,28 @@
 from zoodb import *
 from debug import *
 
+import auth_client
 import time
 
-def transfer(sender, recipient, zoobars):
-    persondb = person_setup()
-    senderp = persondb.query(Person).get(sender)
-    recipientp = persondb.query(Person).get(recipient)
+@catch_err
+def transfer(sender, recipient, zoobars, token):
+    # Authenticate sender
+    if not auth_client.check_token(sender, token):
+        raise ValueError("Cannot authenticate sender.")
 
-    sender_balance = senderp.zoobars - zoobars
-    recipient_balance = recipientp.zoobars + zoobars
+    bankdb = bank_setup()
+    senderacc = bankdb.query(Bank).get(sender)
+    recipientacc = bankdb.query(Bank).get(recipient)
+
+    sender_balance = senderacc.zoobars - zoobars
+    recipient_balance = recipientacc.zoobars + zoobars
 
     if sender_balance < 0 or recipient_balance < 0:
         raise ValueError()
 
-    senderp.zoobars = sender_balance
-    recipientp.zoobars = recipient_balance
-    persondb.commit()
+    senderacc.zoobars = sender_balance
+    recipientacc.zoobars = recipient_balance
+    bankdb.commit()
 
     transfer = Transfer()
     transfer.sender = sender
@@ -28,11 +34,30 @@ def transfer(sender, recipient, zoobars):
     transferdb.add(transfer)
     transferdb.commit()
 
+@catch_err
 def balance(username):
-    db = person_setup()
-    person = db.query(Person).get(username)
-    return person.zoobars
+    db = bank_setup()
+    user_balance = db.query(Bank).get(username)
+    return user_balance.zoobars
 
+@catch_err
+def init_account(username):
+    db = bank_setup()
+    user_balance = db.query(Bank).get(username)
+    if user_balance:
+        return None
+
+    new_account = Bank()
+    new_account.username = username
+    db.add(new_account)
+    db.commit()
+
+    na = db.query(Bank).get(username)
+    log(f"New username: {na.username} New Balance: {na.zoobars}")
+
+    return (new_account.username, new_account.zoobars)
+
+@catch_err
 def get_log(username):
     db = transfer_setup()
     l = db.query(Transfer).filter(or_(Transfer.sender==username,
@@ -43,6 +68,6 @@ def get_log(username):
                  'sender': t.sender ,
                  'recipient': t.recipient,
                  'amount': t.amount })
-    return r 
+    return r
 
 
