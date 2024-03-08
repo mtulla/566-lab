@@ -3,6 +3,8 @@ from debug import *
 
 import hashlib
 import secrets
+from pbkdf2 import PBKDF2
+import os
 
 def newtoken(db, cred):
     hashinput = "%s.%s" % (secrets.token_bytes(16), cred.password)
@@ -15,7 +17,10 @@ def login(username, password):
     cred = db.query(Cred).get(username)
     if not cred:
         return None
-    if cred.password == password:
+
+    log(f"cred.salt: {cred.salt} type: {type(cred.salt)}")
+    alleged_key = PBKDF2(password, cred.salt).read(32)
+    if cred.password == alleged_key:
         return newtoken(db, cred)
     else:
         return None
@@ -26,9 +31,14 @@ def register(username, password):
     if cred:
         return None
 
+    # Salt and hash password.
+    salt = str(os.urandom(8))
+    key = PBKDF2(password, salt).read(32)
+
     newcred = Cred()
     newcred.username = username
-    newcred.password = password
+    newcred.password = key
+    newcred.salt = salt
     cred_db.add(newcred)
     cred_db.commit()
 
