@@ -21,11 +21,10 @@ from debug import *
 ## accesses the bank state, based on your design for privilege-separating
 ## the bank.
 class ProfileAPIServer(rpcsrv.RpcServer):
-    def __init__(self, user, visitor, pcode, token):
+    def __init__(self, user, visitor, pcode):
         self.user = user
         self.visitor = visitor
         self.pcode = pcode
-        self.token = token
 
     def rpc_get_self(self):
         return self.user
@@ -42,7 +41,7 @@ class ProfileAPIServer(rpcsrv.RpcServer):
                  'zoobars': bank_client.balance(username),
                }
 
-    def rpc_xfer(self, target, zoobars, token):
+    def rpc_xfer(self, target, zoobars):
         pass
 
 class FifoServer(object):
@@ -62,13 +61,14 @@ class FifoServer(object):
         os.kill(self.pid, signal.SIGTERM)
 
 class ProfileServer(rpcsrv.RpcServer):
+    ## The Python interpreter expects to be able to access files
+    ## from wasm_python_dir as "/" when it runs.
+    wasm_python_dir = '/usr/local/share/Python-3.11.0-wasm32-wasi-16'
+
     def rpc_run(self, pcode, user, visitor):
+        log(f"Got a run RPC user: {user} visitor: {visitor} code_len: {len(pcode)} code_tpe: {type(pcode)}")
         ## This function needs to run the Python profile code in pcode
         ## and return the output from that execution.
-
-        ## The Python interpreter expects to be able to access files
-        ## from wasm_python_dir as "/" when it runs.
-        wasm_python_dir = '/usr/local/share/Python-3.11.0-wasm32-wasi-16'
 
         ## We create a per-user state directory for files written by
         ## that user's profile.  To ensure we correctly handle usernames
@@ -123,17 +123,22 @@ class ProfileServer(rpcsrv.RpcServer):
 
             config = wasmtime.Config()
             config.wasm_simd = False
+            config.wasm_relaxed_simd = False
             config.epoch_interruption = True
 
             engine = wasmtime.Engine(config)
-            mod = wasmtime.Module.from_file(engine, '%s/python.wasm' % wasm_python_dir)
+            mod = wasmtime.Module.from_file(engine, '%s/python.wasm' % ProfileServer.wasm_python_dir)
             linker = wasmtime.Linker(engine)
             linker.define_wasi()
 
             wasi = wasmtime.WasiConfig()
             wasi.inherit_stderr()
-            wasi.argv = ['python.wasm', ]
-            wasi.preopen_dir(wasm_python_dir, '/')
+            wasi.stdout_file = os.path.join(td, 'wasi_stdout')
+            wasi.argv = ['python.wasm', f'-c {pcode}']
+            wasi.preopen_dir(ProfileServer.wasm_python_dir, '/')
+            # Link the two fifos by preopening the dir.
+            wasi.preopen_dir(td, '/run')
+            wasi.preopen_dir(f'{ProfileServer.wasm_python_dir}/data', '/data')
 
             store = wasmtime.Store(engine)
             store.set_wasi(wasi)
@@ -150,11 +155,19 @@ class ProfileServer(rpcsrv.RpcServer):
                 if e.code != 0:
                     raise e
 
-            return ''
+            with open(os.path.join(td, "wasi_stdout")) as output:
+                ret = output.read()
+            return ret
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print(sys.argv[0], "too few args")
+
+    # Add api.py and rpclib.py modules to the wasm dir.
+    os.system(f"cp /app/zoobar/api.py {ProfileServer.wasm_python_dir}/api.py")
+    os.system(f"cp /app/zoobar/rpclib.py {ProfileServer.wasm_python_dir}/rpclib.py")
+    os.system(f"mkdir {ProfileServer.wasm_python_dir}/data")
+    log("api.py and rpclib.py should be in wasm dir")
 
     s = ProfileServer()
     s.run_fork(sys.argv[1])
