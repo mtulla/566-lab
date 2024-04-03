@@ -961,7 +961,9 @@ def concolic_force_branch(b: int, branch_conds_callers: list[tuple[sym_ast, tupl
   ## arguments, use the '*' operator documented at
   ## https://docs.python.org/3/tutorial/controlflow.html#unpacking-argument-lists
 
-  constraint = None
+  constraint = sym_not(branch_conds_callers[b][0])
+  for i in range(b):
+    constraint = sym_and(constraint, branch_conds_callers[i][0])
 
   if verbose > 2:
     (_, callers) = branch_conds_callers[b]
@@ -987,7 +989,16 @@ def concolic_find_input(constraint: sym_ast, ok_names: typing.Collection[str], v
   ## If Z3 was able to find example inputs that solve this
   ## constraint (i.e., ok == z3.sat), make a new input set
   ## containing the values from Z3's model, and return it.
-  return False, ConcreteValues()
+  (ok, model) = fork_and_check(constraint)
+  if not ok == z3.sat:
+    return False, ConcreteValues()
+  else:
+    concrete_vals = ConcreteValues()
+    for var, val in model.items():
+      if var in ok_names:
+        concrete_vals.add(var, val)
+
+    return True, concrete_vals
 
 # Concolic execute func for many different paths and return all
 # computed results for those different paths.
@@ -1037,6 +1048,17 @@ def concolic_execs(func: typing.Callable[[], typing.Any], maxiter: int = 100, ve
     ##
     ##   where caller is the corresponding value from the list of call
     ##   sites returned by concolic_find_input (i.e., branch_conds_callers).
+
+    for b, (_, caller) in enumerate(branch_conds_callers):
+      new_constraint = concolic_force_branch(b, branch_conds_callers, verbose=verbose)
+      if new_constraint in checked:
+        continue
+      checked.add(new_constraint)
+      ok, new_input = concolic_find_input(new_constraint, ok_names=concrete_values.var_names(), verbose=verbose)
+      if not ok:
+        continue
+      new_input.inherit(concrete_values)
+      inputs.add(new_input, caller)
 
   if verbose > 0:
     print('Stopping after', iter, 'iterations')
