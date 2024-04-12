@@ -371,7 +371,7 @@ def indent(s: z3.AstRef, spaces: str = '  ') -> str:
 ## Support for forking because z3 uses lots of global variables
 
 ## timeout for Z3, in seconds
-z3_timeout = 5
+z3_timeout = 8
 
 def fork_and_check_worker(constr: sym_ast, conn: multiprocessing.connection.Connection) -> None:
   s = z3.Solver()
@@ -577,6 +577,17 @@ class concolic_str(str):
   ## Exercise 7: your code here.
   ## Implement symbolic versions of string length (override __len__)
   ## and contains (override __contains__).
+  def __len__(self) -> int:
+    res = len(self.__v)
+    return concolic_int(sym_length(ast(self)), res)
+
+  def __contains__(self, o: str) -> bool:
+    if isinstance(o, concolic_str):
+      res = o.__v in self.__v
+    else:
+      res = o in self.__v
+
+    return concolic_bool(sym_contains(ast(self), ast(o)), res)
 
   def startswith(self, o: str) -> bool:
     res = self.__v.startswith(o)
@@ -713,6 +724,17 @@ class concolic_bytes(bytes):
   ## Exercise 7: your code here.
   ## Implement symbolic versions of bytes length (override __len__)
   ## and contains (override __contains__).
+  def __len__(self) -> int:
+    res = len(self.__v)
+    return concolic_int(sym_length(ast(self)), res)
+
+  def __contains__(self, o: bytes) -> bool:
+    if isinstance(o, concolic_bytes):
+      res = o.__v in self.__v
+    else:
+      res = o in self.__v
+
+    return concolic_bool(sym_contains(ast(self), ast(o)), res)
 
   def startswith(self, o: bytes) -> bool:
     res = self.__v.startswith(o)
