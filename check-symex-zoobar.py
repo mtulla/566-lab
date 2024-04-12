@@ -97,7 +97,7 @@ def test_stuff():
   users_in_transfers = {transfer.sender for transfer in tdb.query(zoobar.zoodb.Transfer).all()}
   user_balances2 = {person.username: person.zoobars for person in pdb.query(zoobar.zoodb.Person).all()}
   for user, balance in user_balances2.items():
-    if user not in users_in_transfers and user in user_balances1 and balance != user_balances1[user]:
+    if user not in users_in_transfers and user in user_balances1 and balance < user_balances1[user]:
       report_zoobar_theft()
 
   
