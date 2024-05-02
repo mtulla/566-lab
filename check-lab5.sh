@@ -1,7 +1,7 @@
 #!/bin/bash
 
 cleanup() {
-    rm -rf tls.key tls.cert
+    rm -rf tls.key tls.cert /tmp/{zookd.out,ca.out,https-proxy.out}
     sudo killall -w zookd run.py https-proxy.py &> /dev/null
 }
 
@@ -45,6 +45,7 @@ GREEN=$(tput setaf 2)
 PASS="[ ${GREEN}PASS${NORMAL} ]"
 BLUE=$(tput setaf 4)
 INFO="[ ${BLUE}INFO${NORMAL} ]"
+DEBUG="[ ${BLUE}DEBUG${NORMAL} ]"
 YELLOW=$(tput setaf 3)
 DOTS="[ ${YELLOW}....${NORMAL} ]"
 
@@ -66,6 +67,10 @@ else
     exit
 fi
 
+printf "${DEBUG}: Begin CA output\n"
+cat /tmp/ca.out
+printf "${DEBUG}: End CA output\n"
+
 printf "${INFO}: Testing exercise 2: WebAuthn\n"
 
 ## Install the root CA certificate.
@@ -78,3 +83,7 @@ certutil -d sql:$NSSDB -A -t "CP,," -n "6.566 CA" -i /tmp/ca.crt
 ln -s $HOME/.cache $PHOME/.cache
 
 HOME=$PHOME node lab5-tests/grade-webauthn.mjs
+
+printf "${DEBUG} Begin Zoobar output\n"
+cat /tmp/zookd.out
+printf "${DEBUG} End Zoobar output\n"
