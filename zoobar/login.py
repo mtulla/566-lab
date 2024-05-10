@@ -69,6 +69,8 @@ def login() -> Response:
     login_error = ""
     user = User()
 
+    log(f"Login request: {request.get_data()}")
+
     if request.method == 'POST':
         username = request.form.get('login_username')
         cred = json.loads(request.form.get('login_cred'))
@@ -99,6 +101,7 @@ def login() -> Response:
         ## https://github.com/mitsuhiko/werkzeug/issues/226 for more
         ## details.
         response.set_cookie('PyZoobarLogin', cookie)
+        log(f"Login response with cookie: {response.get_data()}")
         return response
 
     return render_template('login.html',
@@ -116,8 +119,10 @@ def logout() -> Response:
 
 @catch_err
 def get_register_challenge() -> Response:
+    log(f"get_register_challenge request: {request.json}")
     return auth.webauthn_register_challenge(request.json["login_username"])
 
 @catch_err
 def get_auth_challenge() -> Response:
+    log(f"get_auth_challenge request: {request.json}")
     return auth.webauthn_auth_challenge(request.json["login_username"])

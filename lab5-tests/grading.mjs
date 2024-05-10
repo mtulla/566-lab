@@ -48,7 +48,17 @@ export var webpage = (() => {
       const page = await phantom.browser.newPage();
 
       // forward page errors to grader output for easier debugging
-      page.on('pageerror', ({ message }) => console.log('Page error:', message));
+      // page.on('pageerror', ({ message }) => console.log('Page error:', message));
+
+      // START snippet **
+    
+      page
+      .on('console', message => console.log(`${message.type().substr(0, 3).toUpperCase()} ${message.text()}`))
+      .on('pageerror', ({ message  }) => console.log('Page error:', message))
+      .on('response', response => console.log(`${response.status()} ${response.url()}`))
+      .on('requestfailed', request => console.log(`${request.failure().errorText} ${request.url()}`))
+        
+      // END snippet **
 
       // See https://chromedevtools.github.io/devtools-protocol/tot/WebAuthn/
       const cdp_client = await page.target().createCDPSession();

@@ -13,7 +13,7 @@ class Person(PersonBase):
     cred_id = Column(String(128))
     cred_pk = Column(String(128))
     sign_count = Column(Integer, nullable=False, default=0)
-    challenge = Column(String(128))
+    challenge = Column(String(1024), default="")
     token = Column(String(128))
     zoobars = Column(Integer, nullable=False, default=10)
     profile = Column(String(5000), nullable=False, default="")

@@ -106,7 +106,7 @@ async function register() {
   });
 
   const pkOptions = await reg_response.json()
-  console.log(pkOptions);
+  console.log(`Register pkOptions: ${JSON.stringify(pkOptions)}`);
   pkOptions["challenge"] = base64urlToBuffer(pkOptions["challenge"]);
   pkOptions["user"]["id"] = base64urlToBuffer(pkOptions["user"]["id"]);
   pkOptions["timeout"] = 20000;
@@ -121,7 +121,7 @@ async function register() {
     console.log("Error in cred creation.");
     submitLoginForm({}, "submit_registration");
   }
-  console.log(credential);
+  console.log(`Register cred: ${JSON.stringify(credential)}`);
   const credResponse = {
     id: credential.id,
     rawId: bufferToBase64url(credential.rawId),
@@ -133,7 +133,7 @@ async function register() {
     type: credential.type,
     clientExtensionResults: {},
   };
-  console.log(credResponse);
+  console.log(`Register credResponse: ${JSON.stringify(credResponse)}`);
   submitLoginForm(credResponse, "submit_registration")
 }
 
@@ -149,8 +149,7 @@ async function login() {
   });
 
   const pkOptions = await auth_response.json()
-  console.log(pkOptions);
-  console.log(pkOptions["allowCredentials"]);
+  console.log(`Login pkOptions: ${JSON.stringify(pkOptions)}`);
   pkOptions["challenge"] = base64urlToBuffer(pkOptions["challenge"]);
   pkOptions["allowCredentials"] = [{
     id: base64urlToBuffer(pkOptions["allowCredentials"][0]["id"]),
@@ -169,7 +168,7 @@ async function login() {
     console.log("Auth cred error.");
     submitLoginForm({}, "submit_login");
   }
-  console.log(credential);
+  console.log(`Login cred: ${JSON.stringify(credential)}`);
 
   const credResponse = {
     id: credential.id,
@@ -182,7 +181,7 @@ async function login() {
     },
     type: credential.type,
   };
-  console.log(credResponse);
+  console.log(`Login credResponse: ${JSON.stringify(credResponse)}`);
   submitLoginForm(credResponse, "submit_login")
 }
 

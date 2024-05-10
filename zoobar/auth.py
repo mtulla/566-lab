@@ -8,6 +8,15 @@ import webauthn
 ORIGIN = "https://zoobar-localhost.csail.mit.edu:8443"
 RP = "zoobar-localhost.csail.mit.edu"
 
+def get_challenge_list(person):
+    challenge_str = person.challenge
+    if challenge_str is None:
+        return []
+    return challenge_str.split(';')
+
+def get_challenge_str(challenge_lst):
+    return ';'.join(challenge_lst)
+
 def newtoken(db, person):
     hashinput = "%s.%s" % (secrets.token_bytes(16), person.cred_id)
     person.token = hashlib.sha256(hashinput.encode('utf-8')).hexdigest()
@@ -49,7 +58,10 @@ def webauthn_register_challenge(username):
         return None
     newperson = Person()
     newperson.username = username
-    newperson.challenge = webauthn.helpers.bytes_to_base64url(registration_options.challenge)
+    challenge_list = get_challenge_list(newperson)
+    challenge_list.append(webauthn.helpers.bytes_to_base64url(registration_options.challenge))
+    newperson.challenge = get_challenge_str(challenge_list)
+    log(f"New register challenge for {username}: {newperson.challenge}")
     db.add(newperson)
     db.commit()
 
@@ -69,7 +81,10 @@ def webauthn_auth_challenge(username):
         allow_credentials=[cred_descriptor]
     )
 
-    person.challenge = webauthn.helpers.bytes_to_base64url(auth_options.challenge)
+    challenge_list = get_challenge_list(person)
+    challenge_list.append(webauthn.helpers.bytes_to_base64url(auth_options.challenge))
+    person.challenge = get_challenge_str(challenge_list)
+    log(f"New auth challenge for {username}: {person.challenge}")
     db.commit()
 
     res = webauthn.options_to_json(auth_options)
@@ -81,19 +96,24 @@ def webauthn_register(username, credential):
     if not person:
         return None
 
+    challenge_list = get_challenge_list(person)
+    expected_challenge = challenge_list.pop()
+    log(f"Registering {username} with challenge {expected_challenge}")
     try:
         verification = webauthn.verify_registration_response(
             credential = credential,
-            expected_challenge = webauthn.base64url_to_bytes(person.challenge),
+            expected_challenge = webauthn.base64url_to_bytes(expected_challenge),
             expected_rp_id = RP,
             expected_origin = ORIGIN
         )
-    except webauthn.helpers.exceptions.InvalidRegistrationResponse:
+    except webauthn.helpers.exceptions.InvalidRegistrationResponse as e:
         log("failed registration")
+        log(e)
         return
 
     person.cred_id = webauthn.helpers.bytes_to_base64url(verification.credential_id)
     person.cred_pk = webauthn.helpers.bytes_to_base64url(verification.credential_public_key)
+    person.challenge = get_challenge_str(challenge_list)
     person.sign_count = 0
     db.commit()
     return newtoken(db, person)
@@ -104,19 +124,24 @@ def webauthn_login(username, credential):
     if not person:
         return None
 
+    challenge_list = get_challenge_list(person)
+    expected_challenge = challenge_list.pop()
+    log(f"Loging in {username} with challenge {expected_challenge}")
     try:
         verification = webauthn.verify_authentication_response(
             credential = credential,
-            expected_challenge = webauthn.base64url_to_bytes(person.challenge),
+            expected_challenge = webauthn.base64url_to_bytes(expected_challenge),
             expected_rp_id = RP,
             expected_origin = ORIGIN,
             credential_public_key = webauthn.base64url_to_bytes(person.cred_pk),
             credential_current_sign_count = person.sign_count,
         )
-    except webauthn.helpers.exceptions.InvalidAuthenticationResponse:
+    except webauthn.helpers.exceptions.InvalidAuthenticationResponse as e:
         log("failed auth")
+        log(e)
         return
 
+    person.challenge = get_challenge_str(challenge_list)
     person.sign_count += 1
     db.commit()
     return newtoken(db, person)
