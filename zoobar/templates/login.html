@@ -105,11 +105,18 @@ async function register() {
     })
   });
 
-  const pkOptions = await reg_response.json()
-  console.log(`Register pkOptions: ${JSON.stringify(pkOptions)}`);
-  pkOptions["challenge"] = base64urlToBuffer(pkOptions["challenge"]);
-  pkOptions["user"]["id"] = base64urlToBuffer(pkOptions["user"]["id"]);
-  pkOptions["timeout"] = 20000;
+  let pkOptions;
+  try {
+      pkOptions = await reg_response.json()
+      console.log(`Register pkOptions: ${JSON.stringify(pkOptions)}`);
+      pkOptions["challenge"] = base64urlToBuffer(pkOptions["challenge"]);
+      pkOptions["user"]["id"] = base64urlToBuffer(pkOptions["user"]["id"]);
+      pkOptions["timeout"] = 20000;
+  }
+  catch (error) {
+    console.log("Error getting register challenge");
+    submitLoginForm({}, "submit_registration");
+  }
 
   let credential;
   try {
@@ -148,15 +155,22 @@ async function login() {
     })
   });
 
-  const pkOptions = await auth_response.json()
-  console.log(`Login pkOptions: ${JSON.stringify(pkOptions)}`);
-  pkOptions["challenge"] = base64urlToBuffer(pkOptions["challenge"]);
-  pkOptions["allowCredentials"] = [{
-    id: base64urlToBuffer(pkOptions["allowCredentials"][0]["id"]),
-    type: 'public-key',
-    transports: ['usb', 'ble', 'nfc'],
-  }];
-  pkOptions["timeout"] = 20000;
+  let pkOptions;
+  try {
+      pkOptions = await auth_response.json()
+      console.log(`Login pkOptions: ${JSON.stringify(pkOptions)}`);
+      pkOptions["challenge"] = base64urlToBuffer(pkOptions["challenge"]);
+      pkOptions["allowCredentials"] = [{
+        id: base64urlToBuffer(pkOptions["allowCredentials"][0]["id"]),
+        type: 'public-key',
+        transports: ['usb', 'ble', 'nfc'],
+      }];
+      pkOptions["timeout"] = 20000;
+  }
+  catch (error) {
+    console.log("Error getting auth challenge");
+    submitLoginForm({}, "submit_login");
+  }
 
   let credential;
   try {

@@ -65,7 +65,8 @@ def webauthn_register_challenge(username):
     db.add(newperson)
     db.commit()
 
-    return webauthn.options_to_json(registration_options)
+    options = webauthn.options_to_json(registration_options)
+    return  options
 
 def webauthn_auth_challenge(username):
     db = person_setup()
@@ -87,8 +88,8 @@ def webauthn_auth_challenge(username):
     log(f"New auth challenge for {username}: {person.challenge}")
     db.commit()
 
-    res = webauthn.options_to_json(auth_options)
-    return res
+    options = webauthn.options_to_json(auth_options)
+    return options
 
 def webauthn_register(username, credential):
     db = person_setup()

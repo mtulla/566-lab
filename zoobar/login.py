@@ -120,9 +120,17 @@ def logout() -> Response:
 @catch_err
 def get_register_challenge() -> Response:
     log(f"get_register_challenge request: {request.json}")
-    return auth.webauthn_register_challenge(request.json["login_username"])
+    resp = auth.webauthn_register_challenge(request.json["login_username"])
+    if resp is None:
+        resp = "Error"
+    log(f"get_resgister_challenge response: {resp}")
+    return resp
 
 @catch_err
 def get_auth_challenge() -> Response:
     log(f"get_auth_challenge request: {request.json}")
-    return auth.webauthn_auth_challenge(request.json["login_username"])
+    resp = auth.webauthn_auth_challenge(request.json["login_username"])
+    if resp is None:
+        resp = "Error"
+    log(f"get_auth_challenge_response: {resp}")
+    return resp
