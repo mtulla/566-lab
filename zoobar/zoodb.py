@@ -10,7 +10,9 @@ TransferBase = declarative_base()
 class Person(PersonBase):
     __tablename__ = "person"
     username = Column(String(128), primary_key=True)
-    password = Column(String(128))
+    cred_id = Column(String(128))
+    cred_pk = Column(String(128))
+    sign_count = Column(Integer, nullable=False, default=0)
     challenge = Column(String(128))
     token = Column(String(128))
     zoobars = Column(Integer, nullable=False, default=10)

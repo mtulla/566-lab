@@ -23,7 +23,8 @@ app.add_url_rule("/transfer", "transfer", transfer.transfer, methods=['GET', 'PO
 app.add_url_rule("/zoobarjs", "zoobarjs", zoobarjs.zoobarjs, methods=['GET'])
 app.add_url_rule("/login", "login", login.login, methods=['GET', 'POST'])
 app.add_url_rule("/logout", "logout", login.logout)
-app.add_url_rule("/get_challenge", "get_challenge", login.get_challenge, methods=["POST"])
+app.add_url_rule("/get_register_challenge", "get_register_challenge", login.get_register_challenge, methods=["POST"])
+app.add_url_rule("/get_auth_challenge", "get_auth_challenge", login.get_auth_challenge, methods=["POST"])
 
 initpath = os.path.realpath(__file__)
 zoobar_dir = os.path.dirname(initpath)

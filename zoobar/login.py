@@ -12,8 +12,8 @@ class User(object):
     def __init__(self):
         self.person = None
 
-    def checkLogin(self, username: str, password: str) -> Optional[str]:
-        token = auth.login(username, password)
+    def checkLogin(self, username: str, credential: str) -> Optional[str]:
+        token = auth.webauthn_login(username, credential)
         if token is not None:
             return self.loginCookie(username, token)
         else:
@@ -71,9 +71,7 @@ def login() -> Response:
 
     if request.method == 'POST':
         username = request.form.get('login_username')
-        password = request.form.get('login_password')
         cred = json.loads(request.form.get('login_cred'))
-        log(request.form)
 
         if 'submit_registration' in request.form:
             if not username:
@@ -87,12 +85,12 @@ def login() -> Response:
         elif 'submit_login' in request.form:
             if not username:
                 login_error = "You must supply a username to log in."
-            elif not password:
-                login_error = "You must supply a password to log in."
+            elif not cred:
+                login_error = "You must supply a credential to log in."
             else:
-                cookie = user.checkLogin(username, password)
+                cookie = user.checkLogin(username, cred)
                 if not cookie:
-                    login_error = "Invalid username or password."
+                    login_error = "Invalid credential."
 
     nexturl = request.values.get('nexturl', url_for('index'))
     if cookie:
@@ -117,5 +115,9 @@ def logout() -> Response:
     return response
 
 @catch_err
-def get_challenge() -> Response:
+def get_register_challenge() -> Response:
     return auth.webauthn_register_challenge(request.json["login_username"])
+
+@catch_err
+def get_auth_challenge() -> Response:
+    return auth.webauthn_auth_challenge(request.json["login_username"])
