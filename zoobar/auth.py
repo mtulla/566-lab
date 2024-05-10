@@ -3,6 +3,7 @@ from debug import *
 
 import hashlib
 import secrets
+import webauthn
 
 def newtoken(db, person):
     hashinput = "%s.%s" % (secrets.token_bytes(16), person.password)
@@ -31,6 +32,43 @@ def register(username, password):
     db.add(newperson)
     db.commit()
     return newtoken(db, newperson)
+
+def webauthn_register_challenge(username):
+    registration_options = webauthn.generate_registration_options(
+        rp_id="localhost",
+        rp_name="Zoobar",
+        user_name=username
+    )
+
+    db = person_setup()
+    person = db.query(Person).get(username)
+    if person:
+        return None
+    newperson = Person()
+    newperson.username = username
+    newperson.challenge = webauthn.helpers.bytes_to_base64url(registration_options.challenge)
+    db.add(newperson)
+    db.commit()
+    
+    return webauthn.options_to_json(registration_options)
+
+def webauthn_register(username, credential):
+    db = person_setup()
+    person = db.query(Person).get(username)
+    if not person:
+        return None
+
+    try:
+        webauthn.verify_registration_response(
+            credential = credential,
+            expected_challenge = webauthn.base64url_to_bytes(person.challenge),
+            expected_rp_id = "localhost",
+            expected_origin = "http://localhost:8080",
+        )
+    except webauthn.helper.exceptions.InvalidRegistrationResponse:
+        return 
+    
+    return newtoken(db, person)
 
 def check_token(username, token):
     db = person_setup()

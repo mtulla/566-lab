@@ -2,7 +2,7 @@
 {% block title %}Login{% endblock %}
 {% block main %}
 <div id="login" class="centerpiece">
-<form name="loginform" method="POST" action="{{ url_for('login') }}">
+<form name="loginform" method="POST" action="{{ url_for('login') }}" onsubmit="return false;">
 <table>
 <tr>
    <td>Username:</td>
@@ -12,8 +12,8 @@
 <tr>
    <td>Password:</td>
   <td colspan=2><input type="password" name="login_password" size=20 autocomplete="no">
-  <input type="submit" name="submit_login" value="Log in">
-  <input type="submit" name="submit_registration" value="Register"></td>
+  <input type="submit" name="submit_login" value="Log in" onclick="login()">
+  <input type="submit" name="submit_registration" value="Register" onclick="register()"></td>
 </tr>
 </table>
 <input type="hidden" name="nexturl" value="{{ nexturl }}">
@@ -22,5 +22,135 @@
 <div class="footer warning">
 {{ login_error }}
 </div>
+
 <script>document.loginform.login_username.focus();</script>
+<script> 
+
+function base64urlToBuffer(baseurl64String) {
+  // Base64url to Base64
+  const padding = "==".slice(0, (4 - (baseurl64String.length % 4)) % 4);
+  const base64String =
+    baseurl64String.replace(/-/g, "+").replace(/_/g, "/") + padding;
+
+  // Base64 to binary string
+  const str = atob(base64String);
+
+  // Binary string to buffer
+  const buffer = new ArrayBuffer(str.length);
+  const byteView = new Uint8Array(buffer);
+  for (let i = 0; i < str.length; i++) {
+    byteView[i] = str.charCodeAt(i);
+  }
+  return buffer;
+}
+
+function bufferToBase64url(buffer) {
+  // Buffer to binary string
+  const byteView = new Uint8Array(buffer);
+  let str = "";
+  for (const charCode of byteView) {
+    str += String.fromCharCode(charCode);
+  }
+
+  // Binary string to base64
+  const base64String = btoa(str);
+
+  // Base64 to base64url
+  // We assume that the base64url string is well-formed.
+  const base64urlString = base64String.replace(/\+/g, "-").replace(
+    /\//g,
+    "_",
+  ).replace(/=/g, "");
+  return base64urlString;
+}
+
+function submitLoginForm(credResponse, loginMode) {
+  let form = document.createElement("form");
+  let login_username = document.createElement("input");
+  let login_cred = document.createElement("input");
+  let nexturl = document.createElement("input");
+  let mode = document.createElement("input");
+  
+  form.method = "POST";
+  form.action = "{{ url_for('login') }}";
+  form.style.display = "none";
+  form.style.visibility = "hidden";
+
+  login_username.name = "login_username";
+  login_username.value = document.loginform.login_username.value;
+  form.appendChild(login_username);
+
+  login_cred.name = "login_cred";
+  login_cred.value = JSON.stringify(credResponse);
+  form.appendChild(login_cred);
+
+  nexturl.name = "nexturl";
+  nexturl.value = document.loginform.nexturl.value;
+  form.appendChild(nexturl);
+
+  mode.name = loginMode;
+  form.appendChild(mode);
+
+  document.body.appendChild(form);
+  form.submit();
+}
+
+async function register() {
+  const reg_response = await fetch('/zoobar/index.cgi/get_challenge', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      login_username: document.loginform.login_username.value,
+      login_password: document.loginform.login_password.value,
+      submit_registration: "Register",
+      nexturl: document.loginform.nexturl.value
+      
+    })
+  });
+
+  const pkOptions = await reg_response.json()
+  console.log(pkOptions);
+  pkOptions["challenge"] = base64urlToBuffer(pkOptions["challenge"])
+  pkOptions["user"]["id"] = base64urlToBuffer(pkOptions["user"]["id"])
+
+  const credential = await navigator.credentials.create({
+    publicKey: pkOptions
+  });
+  console.log(credential);
+  const credResponse = {
+    id: credential.id,
+    rawId: bufferToBase64url(credential.rawId),
+    response: {
+      attestationObject: bufferToBase64url(credential.response.attestationObject),
+      clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
+      transports: credential.response.getTransports(),
+    },
+    type: credential.type,
+    clientExtensionResults: {},
+  };
+  console.log(credResponse);
+  submitLoginForm(credResponse, "submit_registration")
+}
+
+async function login() {
+  const login_response = await fetch('/zoobar/index.cgi/webauht_login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      login_username: document.loginform.login_username.value,
+      login_password: document.loginform.login_password.value,
+      submit_registration: "Login",
+      nexturl: document.loginform.nexturl.value
+      
+    })
+  });
+
+  return login_response;
+}
+
+</script>
 {% endblock %}

@@ -6,7 +6,7 @@ from typing import Optional
 
 import auth
 import bank
-import random
+import json
 
 class User(object):
     def __init__(self):
@@ -26,8 +26,8 @@ class User(object):
     def logout(self) -> None:
         self.person = None
 
-    def addRegistration(self, username: str, password: str) -> Optional[str]:
-        token = auth.register(username, password)
+    def addRegistration(self, username: str, cred: str) -> Optional[str]:
+        token = auth.webauthn_register(username, cred)
         if token is not None:
             return self.loginCookie(username, token)
         else:
@@ -72,14 +72,16 @@ def login() -> Response:
     if request.method == 'POST':
         username = request.form.get('login_username')
         password = request.form.get('login_password')
+        cred = json.loads(request.form.get('login_cred'))
+        log(request.form)
 
         if 'submit_registration' in request.form:
             if not username:
                 login_error = "You must supply a username to register."
-            elif not password:
-                login_error = "You must supply a password to register."
+            elif not cred:
+                login_error = "You must supply a credential to register."
             else:
-                cookie = user.addRegistration(username, password)
+                cookie = user.addRegistration(username, cred)
                 if not cookie:
                     login_error = "Registration failed."
         elif 'submit_login' in request.form:
@@ -113,3 +115,7 @@ def logout() -> Response:
     response = redirect(url_for('login'))
     response.set_cookie('PyZoobarLogin', '')
     return response
+
+@catch_err
+def get_challenge() -> Response:
+    return auth.webauthn_register_challenge(request.json["login_username"])

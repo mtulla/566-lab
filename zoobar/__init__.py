@@ -12,6 +12,7 @@ import users
 import transfer
 import zoobarjs
 import zoodb
+import auth
 from debug import catch_err
 
 app = Flask(__name__)
@@ -22,6 +23,7 @@ app.add_url_rule("/transfer", "transfer", transfer.transfer, methods=['GET', 'PO
 app.add_url_rule("/zoobarjs", "zoobarjs", zoobarjs.zoobarjs, methods=['GET'])
 app.add_url_rule("/login", "login", login.login, methods=['GET', 'POST'])
 app.add_url_rule("/logout", "logout", login.logout)
+app.add_url_rule("/get_challenge", "get_challenge", login.get_challenge, methods=["POST"])
 
 initpath = os.path.realpath(__file__)
 zoobar_dir = os.path.dirname(initpath)
